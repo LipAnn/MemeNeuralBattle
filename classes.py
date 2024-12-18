@@ -25,9 +25,10 @@ class Game:
     async def join(self, player):
 
         for current_player in self.players:
-            await tg_utils.send_message(current_player, replies.PLAYER_JOINED_TO_HOST_MESSAGE
-                                        .format(name=common.user_id_to_name[player]))
-            await tg_utils.send_message(current_player, replies.PLAYER_COUNT
+            await tg_utils.send_message(current_player,
+                                        replies.PLAYER_JOINED_TO_HOST_MESSAGE
+                                        .format(name=common.user_id_to_name[player]) + "\n" +
+                                        replies.PLAYER_COUNT
                                         .format(cur=len(self.players) + 1, limit=self.limit_players))
 
         self.players.append(player)
@@ -36,9 +37,10 @@ class Game:
         self.players.remove(player)
 
         for current_player in self.players:
-            await tg_utils.send_message(current_player, replies.PLAYER_LEFT_THE_GAME
-                                        .format(name=common.user_id_to_name[player]))
-            await tg_utils.send_message_kb(current_player, replies.PLAYER_COUNT
+            await tg_utils.send_message_kb(current_player,
+                                           replies.PLAYER_LEFT_THE_GAME
+                                           .format(name=common.user_id_to_name[player]) + "\n" +
+                                           replies.PLAYER_COUNT
                                            .format(cur=len(self.players), limit=self.limit_players),
                                            reply_markup=default_menu.kb_default)
 

@@ -9,3 +9,4 @@ SUCCESSFULLY_CONNECTED_TO_THE_GAME = "Вы успешно присоединил
 YOU_ARE_NOT_CONNECTED_TO_THE_GAME = "Вы не находитесь в какой-либо игре"
 PLAYER_LEFT_THE_GAME = "Игрок {name} покинул игру"
 YOU_LEFT_THE_GAME = "Вы покинули игру"
+TOO_MANY_PLAYERS = "В данной игре уже максимальное количество игроков"

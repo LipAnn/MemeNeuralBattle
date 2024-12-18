@@ -1,6 +1,10 @@
 from aiogram import Bot
+import dotenv
+import os
 
-token = "7711313848:AAGaX4oyFupwHUtX3U0_AbQ01mq381xcBZs"
+dotenv.load_dotenv()
+
+token = os.getenv("TOKEN")
 bot = Bot(token)
 
 game_code_to_host_dict = dict()
