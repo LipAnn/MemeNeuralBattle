@@ -1,23 +1,17 @@
 import random
 
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram import types
 
 import common
 import replies
-from classes import Game
-
-
-kb_host_buttons = [
-    [
-        KeyboardButton(text="Начать игру"),
-        KeyboardButton(text="Выйти и завершить игру")
-    ]
-]
-kb_host = ReplyKeyboardMarkup(keyboard=kb_host_buttons, resize_keyboard=True)
+from game import Game
+from keyboard import kb_host
 
 
 async def create_new_game(message: types.Message):
+
+    common.action[message.from_user.id] = ""
+
     game_code = await generate_random_token()
     game = Game(code=game_code, host=message.from_user.id, limit_players=8)
 
@@ -35,9 +29,23 @@ async def generate_random_token():
 
 async def leave_and_destroy_game(message: types.Message):
 
+    common.action[message.from_user.id] = ""
+
     if not common.host_to_game_code.keys().__contains__(message.from_user.id):
         await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
         return
 
     game = common.code_to_game[common.host_to_game_code[message.from_user.id]]
     await game.destroy()
+
+
+async def start_game(message: types.Message):
+
+    common.action[message.from_user.id] = ""
+
+    if not common.host_to_game_code.keys().__contains__(message.from_user.id):
+        await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
+        return
+
+    game = common.code_to_game[common.host_to_game_code[message.from_user.id]]
+    await game.start()

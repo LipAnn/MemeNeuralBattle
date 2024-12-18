@@ -1,6 +1,7 @@
-from aiogram import Bot
-import dotenv
 import os
+
+import dotenv
+from aiogram import Bot
 
 dotenv.load_dotenv()
 

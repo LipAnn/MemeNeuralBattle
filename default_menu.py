@@ -1,5 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram import types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 import common
 
@@ -13,6 +13,8 @@ kb_default = ReplyKeyboardMarkup(keyboard=kb_default_buttons, resize_keyboard=Tr
 
 
 async def start(message: types.Message):
+
+    common.action[message.from_user.id] = ""
 
     common.user_id_to_chat_id[message.from_user.id] = message.chat.id
 
