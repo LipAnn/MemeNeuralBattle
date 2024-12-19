@@ -15,3 +15,6 @@ action = dict()
 user_id_to_chat_id = dict()
 user_id_to_name = dict()
 used_codes = list()
+
+images_dir = os.path.dirname("images")
+last_image_num = 50
