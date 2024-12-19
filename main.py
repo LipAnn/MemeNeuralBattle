@@ -10,6 +10,7 @@ from common import action, bot
 from default_menu import start
 from host_menu import create_new_game, leave_and_destroy_game, start_game
 from answer import answer
+from vote import vote
 
 logging.basicConfig(level=logging.INFO)
 dp = Dispatcher()
@@ -31,7 +32,12 @@ async def main():
     dp.message.register(start_game, F.text.lower() == "начать игру")
 
     dp.message.register(answer, F.from_user.id.func(
-        lambda x: action.keys().__contains__(x) and action[x] == "раунд"))
+        lambda x: action.keys().__contains__(x) and action[x] == "раунд"
+    ))
+
+    dp.message.register(vote, F.from_user.id.func(
+        lambda x: action.keys().__contains__(x) and action[x] == "vote"
+    ))
 
     dp.message.register(unknown_command)
 

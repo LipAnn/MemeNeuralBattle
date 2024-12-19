@@ -1,11 +1,13 @@
 import random
+import time
+
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 import common
 import default_menu
 import replies
 import tg_utils
 from keyboard import kb_host_game, kb_client_game, kb_host, kb_client
-import bisect
 
 games = list()
 
@@ -21,10 +23,13 @@ class Game:
         self.round = 0
         self.themes = list()
         self.player_images = dict()
-        self.round_limit = 10
+        self.round_limit = 5
         self.answer = dict()
-        self.finished = dict()
+        self.round_finished = dict()
         self.last_used_card_index = dict()
+        self.vote = dict()
+        self.vote_finished = dict()
+        self.scoreboard = dict()
 
         self.players.append(host)
         common.host_to_game_code[host] = code
@@ -42,14 +47,14 @@ class Game:
 
     async def join(self, player):
 
+        self.players.append(player)
+
         for current_player in self.players:
             await tg_utils.send_message(current_player,
                                         replies.PLAYER_JOINED_TO_HOST_MESSAGE
                                         .format(name=common.user_id_to_name[player]) + "\n" +
                                         replies.PLAYER_COUNT
-                                        .format(cur=len(self.players) + 1, limit=self.limit_players))
-
-        self.players.append(player)
+                                        .format(cur=len(self.players), limit=self.limit_players))
 
     async def leave(self, player):
         self.players.remove(player)
@@ -69,6 +74,7 @@ class Game:
 
     async def destroy(self):
         for player in self.players:
+            common.action[player] = ""
             await tg_utils.send_message_kb(player, replies.THE_GAME_HAS_BEEN_DESTROYED, default_menu.kb_default)
 
         self.players.clear()
@@ -104,6 +110,7 @@ class Game:
             image_nums.append(i)
 
         for player in self.players:
+            self.scoreboard[player] = 0
             self.last_used_card_index[player] = 5
             self.player_images[player] = list()
 
@@ -115,6 +122,7 @@ class Game:
     async def next_round(self):
 
         self.answer.clear()
+        self.vote.clear()
         self.round += 1
 
         for player in self.players:
@@ -142,16 +150,52 @@ class Game:
 
     async def end_round(self):
 
+        scoreboard_message = replies.SCOREBOARD_TITLE
+        for player in self.players:
+            scoreboard_message += "\n"
+            scoreboard_message += common.user_id_to_name[player] + ": " + str(self.scoreboard[player])
+        scoreboard_message += "\n\n" + replies.NEXT_ROUND_IN.format(time=5)
+
+        await tg_utils.send_group_message(self.players, scoreboard_message)
+
         for player in self.players:
             common.action[player] = ""
 
-            await tg_utils.send_message(player, replies.ROUND_HAS_ENDED.format(cur=self.round, limit=self.round_limit))
+            self.last_used_card_index[player] += 1
+            self.player_images[player][int(self.answer[player]) - 1] = \
+                self.player_images[player][self.last_used_card_index[player]]
 
         if self.round == self.round_limit:
             await self.end_game()
             return
 
+        time.sleep(5)
         await self.next_round()
+
+    async def voting(self):
+
+        image_names = list()
+        for player in self.players:
+            image_names.append(self.player_images[player][int(self.answer[player]) - 1])
+
+        for player in self.players:
+            common.action[player] = "vote"
+
+            await tg_utils.send_images(user=player,
+                                       image_names=image_names,
+                                       caption=replies.VOTING_STAGE.format(cur=self.round, limit=self.round_limit) +
+                                               "\n\n" + replies.THEME.format(theme=self.themes[self.round - 1]))
+
+    async def set_vote(self, player, vote):
+
+        await self.send_to_players(replies.PLAYER_HAS_VOTED.format(name=common.user_id_to_name[player]))
+        self.vote[player] = vote
+        self.scoreboard[self.players[int(vote) - 1]] += 1
+
+        if len(self.vote) == len(self.players) and not self.vote_finished.keys().__contains__(self.round):
+            self.vote_finished[self.round] = True
+            await tg_utils.send_group_message(self.players, replies.VOTE_HAS_ENDED)
+            await self.end_round()
 
     async def start(self):
 
@@ -169,9 +213,26 @@ class Game:
         await self.send_to_players(replies.PLAYER_SET_AN_ANSWER.format(name=common.user_id_to_name[player]))
         self.answer[player] = answer
 
-        self.last_used_card_index[player] += 1
-        self.player_images[player][int(answer) - 1] = self.player_images[player][self.last_used_card_index[player]]
+        buttons = list()
+        buttons_count = 0
+        for i in range((len(self.players) - 1) // 3 + 1):
+            buttons_row = list()
+            for j in range(3):
+                if buttons_count < len(self.players):
+                    buttons_count += 1
+                    buttons_row.append(KeyboardButton(text=str(buttons_count)))
+            buttons.append(buttons_row)
 
-        if len(self.answer) == len(self.players) and not self.finished.keys().__contains__(self.round):
-            self.finished[self.round] = True
-            await self.end_round()
+        if player == self.host:
+            buttons.append([KeyboardButton(text="Выйти и завершить игру")])
+        else:
+            buttons.append([KeyboardButton(text="Выйти из игры")])
+
+        keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+
+        if len(self.answer) == len(self.players) and not self.round_finished.keys().__contains__(self.round):
+            self.round_finished[self.round] = True
+            await tg_utils.send_group_message_kb(message=replies.ROUND_HAS_ENDED,
+                                                 users=self.players,
+                                                 keyboard=keyboard)
+            await self.voting()
