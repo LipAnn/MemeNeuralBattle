@@ -7,6 +7,8 @@ import replies
 
 async def vote(message: types.Message):
 
+    await common.update_caches(message)
+
     try:
         int(message.text)
     except:
@@ -19,7 +21,7 @@ async def vote(message: types.Message):
         await message.answer(replies.WRONG_PIC_NUMBER)
         return
 
-    if game.players[int(message.text) - 1] == message.from_user.id:
+    if game.players[game.picture_number_to_user_index[int(message.text)]] == message.from_user.id:
         await message.answer(replies.YOU_CANNOT_VOTE_FOR_YOURSELF)
         return
 

@@ -25,11 +25,14 @@ class Game:
         self.player_images = dict()
         self.round_limit = 5
         self.answer = dict()
+        self.user_id_to_answer_order = dict()
         self.round_finished = dict()
         self.last_used_card_index = dict()
         self.vote = dict()
         self.vote_finished = dict()
         self.scoreboard = dict()
+        self.user_index_to_picture_number = list()
+        self.picture_number_to_user_index = list()
 
         self.players.append(host)
         common.host_to_game_code[host] = code
@@ -123,6 +126,19 @@ class Game:
 
         self.answer.clear()
         self.vote.clear()
+        self.user_id_to_answer_order.clear()
+        self.user_index_to_picture_number.clear()
+        self.picture_number_to_user_index.clear()
+        self.picture_number_to_user_index.append(-1)
+
+        for i in range(len(self.players)):
+            self.user_index_to_picture_number.append(i + 1)
+            self.picture_number_to_user_index.append(i)
+        random.shuffle(self.user_index_to_picture_number)
+
+        for i in range(len(self.user_index_to_picture_number)):
+            self.picture_number_to_user_index[self.user_index_to_picture_number[i]] = i
+
         self.round += 1
 
         for player in self.players:
@@ -143,10 +159,29 @@ class Game:
 
     async def end_game(self):
 
+        winner_score = -1
+        winners = 0
+        for player in self.players:
+            if self.scoreboard[player] > winner_score:
+                winner_score = self.scoreboard[player]
+                winners = [player]
+            elif self.scoreboard[player] == winner_score:
+                winners.append(player)
+
+        winner_list_message = ""
+        for winner in winners:
+            winner_list_message += common.user_id_to_name[winner] + " "
+        winner_list_message = winner_list_message.removesuffix(" ")
+
         for player in self.players:
             keyboard = kb_client if player != self.host else kb_host
 
-            await tg_utils.send_message_kb(player, replies.GAME_IS_OVER, keyboard)
+            winner_placeholder = replies.WINNER
+            if len(winners) > 1:
+                winner_placeholder = replies.WINNERS
+
+            await tg_utils.send_message_kb(player, replies.GAME_IS_OVER + "\n\n" +
+                                           winner_placeholder.format(name=winner_list_message), keyboard)
 
     async def end_round(self):
 
@@ -174,9 +209,12 @@ class Game:
 
     async def voting(self):
 
-        image_names = list()
+        image_names = [0] * len(self.players)
+        user_index = 0
         for player in self.players:
-            image_names.append(self.player_images[player][int(self.answer[player]) - 1])
+            image_names[self.user_index_to_picture_number[user_index] - 1] =\
+                self.player_images[player][int(self.answer[player]) - 1]
+            user_index += 1
 
         for player in self.players:
             common.action[player] = "vote"
@@ -190,7 +228,8 @@ class Game:
 
         await self.send_to_players(replies.PLAYER_HAS_VOTED.format(name=common.user_id_to_name[player]))
         self.vote[player] = vote
-        self.scoreboard[self.players[int(vote) - 1]] += 1
+        self.scoreboard[self.players[self.picture_number_to_user_index[int(vote)]]] += \
+            len(self.players) - self.user_id_to_answer_order[self.players[self.picture_number_to_user_index[int(vote)]]] + 1
 
         if len(self.vote) == len(self.players) and not self.vote_finished.keys().__contains__(self.round):
             self.vote_finished[self.round] = True
@@ -211,6 +250,7 @@ class Game:
     async def set_answer(self, player, answer):
 
         await self.send_to_players(replies.PLAYER_SET_AN_ANSWER.format(name=common.user_id_to_name[player]))
+        self.user_id_to_answer_order[player] = len(self.user_id_to_answer_order) + 1
         self.answer[player] = answer
 
         buttons = list()
