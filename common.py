@@ -1,7 +1,7 @@
 import os
 
 import dotenv
-from aiogram import Bot
+from aiogram import Bot, types
 
 dotenv.load_dotenv()
 
@@ -17,4 +17,12 @@ user_id_to_name = dict()
 used_codes = list()
 
 images_dir = os.path.dirname("images")
-last_image_num = 50
+last_image_num = 154
+
+
+async def update_caches(message: types.Message):
+    action[message.from_user.id] = ""
+    user_id_to_chat_id[message.from_user.id] = message.chat.id
+    first_name = message.from_user.first_name if message.from_user.first_name is not None else ""
+    last_name = message.from_user.last_name if message.from_user.last_name is not None else ""
+    user_id_to_name[message.from_user.id] = first_name + " " + last_name

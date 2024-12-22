@@ -2,6 +2,7 @@ from aiogram import types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 import common
+import replies
 
 kb_default_buttons = [
     [
@@ -13,14 +14,5 @@ kb_default = ReplyKeyboardMarkup(keyboard=kb_default_buttons, resize_keyboard=Tr
 
 
 async def start(message: types.Message):
-
-    common.action[message.from_user.id] = ""
-
-    common.user_id_to_chat_id[message.from_user.id] = message.chat.id
-
-    first_name = message.from_user.first_name if message.from_user.first_name is not None else ""
-    last_name = message.from_user.last_name if message.from_user.last_name is not None else ""
-
-    common.user_id_to_name[message.from_user.id] = first_name + " " + last_name
-
-    await message.answer("Старт", reply_markup=kb_default)
+    await common.update_caches(message)
+    await message.answer(replies.START_MESSAGE, reply_markup=kb_default)

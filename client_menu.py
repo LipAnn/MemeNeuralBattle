@@ -10,6 +10,8 @@ from keyboard import kb_client
 
 async def join_game(message: types.Message):
 
+    await common.update_caches(message)
+
     common.action[message.from_user.id] = ""
 
     if await Game.is_in_game(message.from_user.id):
@@ -21,6 +23,8 @@ async def join_game(message: types.Message):
 
 
 async def join_specified_game(message: types.Message):
+
+    await common.update_caches(message)
 
     common.action[message.from_user.id] = ""
 
@@ -51,10 +55,12 @@ async def join_specified_game(message: types.Message):
 
 async def leave_game(message: types.Message):
 
+    await common.update_caches(message)
+
     common.action[message.from_user.id] = ""
 
     if not await Game.is_in_game(message.from_user.id):
-        await message.answer(replies.YOU_ARE_NOT_CONNECTED_TO_THE_GAME)
+        await message.answer(replies.YOU_ARE_NOT_CONNECTED_TO_THE_GAME, reply_markup=default_menu.kb_default)
         return
 
     game = await Game.get_game(message.from_user.id)

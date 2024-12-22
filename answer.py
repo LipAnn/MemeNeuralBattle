@@ -6,6 +6,8 @@ from game import Game
 
 async def answer(message: types.Message):
 
+    await common.update_caches(message)
+
     if message.text not in ["1", "2", "3", "4", "5", "6"]:
         await message.answer(replies.WRONG_PIC_NUMBER)
         return
