@@ -7,6 +7,7 @@ import common
 import default_menu
 import replies
 import tg_utils
+import ya_gpt
 from keyboard import kb_host_game, kb_client_game, kb_host, kb_client
 
 games = list()
@@ -33,6 +34,7 @@ class Game:
         self.scoreboard = dict()
         self.user_index_to_picture_number = list()
         self.picture_number_to_user_index = list()
+        self.ai = True
 
         self.players.append(host)
         common.host_to_game_code[host] = code
@@ -101,12 +103,15 @@ class Game:
     async def prepare_game(self):
         self.round = 0
 
-        with open("themes/themes.txt", encoding="UTF-8") as themes_file:
-            themes = themes_file.readlines()
-        for i in range(self.round_limit):
-            theme_index = random.randint(0, len(themes) - 1)
-            self.themes.append(themes[theme_index])
-            themes.remove(themes[theme_index])
+        if not self.ai:
+            with open("themes/themes.txt", encoding="UTF-8") as themes_file:
+                themes = themes_file.readlines()
+            for i in range(self.round_limit):
+                theme_index = random.randint(0, len(themes) - 1)
+                self.themes.append(themes[theme_index])
+                themes.remove(themes[theme_index])
+        else:
+            self.themes = ya_gpt.get_generated_themes(self.round_limit)
 
         image_nums = list()
         for i in range(0, common.last_image_num + 1):
@@ -242,9 +247,16 @@ class Game:
 
         self.is_started = True
 
-        for player in self.players:
-            await tg_utils.send_message(player, replies.THE_GAME_HAS_BEEN_STARTED)
+        if self.ai:
+            game_mode = "ИИ"
+        else:
+            game_mode = "Классический"
 
+        for player in self.players:
+            await tg_utils.send_message(player, replies.THE_GAME_HAS_BEEN_STARTED.format(time=5) + "\n\n" +
+                                        replies.OPTIONS.format(game_mode=game_mode, round_limit=self.round_limit, players_count=len(self.players)))
+
+        time.sleep(5)
         await self.next_round()
 
     async def set_answer(self, player, answer):

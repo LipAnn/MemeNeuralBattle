@@ -61,7 +61,24 @@ __kb_host_options_buttons = [
         KeyboardButton(text="Установить количество раундов")
     ],
     [
+        KeyboardButton(text="Режим игры")
+    ],
+    [
         KeyboardButton(text="Выйти в меню")
     ]
 ]
 kb_host_options = ReplyKeyboardMarkup(keyboard=__kb_host_options_buttons, resize_keyboard=True)
+
+__kb_host_ai_game_mode = [
+    [
+        KeyboardButton(text="ИИ-режим"),
+        KeyboardButton(text="Классический режим")
+    ],
+    [
+        KeyboardButton(text="Настройки игры")
+    ],
+    [
+        KeyboardButton(text="Выйти в меню")
+    ]
+]
+kb_host_game_mode = ReplyKeyboardMarkup(keyboard=__kb_host_ai_game_mode, resize_keyboard=True)

@@ -12,13 +12,16 @@ from keyboard import kb_host
 
 async def create_new_game(message: types.Message):
     await common.update_caches(message)
-
     common.action[message.from_user.id] = ""
+
+    if await Game.is_in_game(message.from_user.id):
+        await message.answer(replies.ALREADY_CONNECTED_TO_THE_GAME)
+        return
 
     game_code = await generate_random_token()
     game = Game(code=game_code, host=message.from_user.id, limit_players=8)
 
-    await message.answer("Игра создана, код игры: " + str(game_code), reply_markup=kb_host)
+    await message.answer(replies.THE_GAME_HAS_BEEN_CREATED.format(code=game_code), reply_markup=kb_host)
 
 
 # Очень кринжовая кривая функция ради того, чтобы была. Ради бога, перепиши её когда-нибудь
@@ -68,7 +71,12 @@ async def options(message: types.Message):
         await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
         return
 
-    await message.answer(replies.OPTIONS, reply_markup=keyboard.kb_host_options)
+    game = await Game.get_game(message.from_user.id)
+    if game.ai:
+        game_mode = "ИИ"
+    else:
+        game_mode = "Классический"
+    await message.answer(replies.OPTIONS.format(game_mode=game_mode, round_limit=game.round_limit, players_count=len(game.players)), reply_markup=keyboard.kb_host_options)
 
 
 async def enter_round_limit(message: types.Message):
@@ -122,3 +130,62 @@ async def back_to_menu(message: types.Message):
         await message.answer(replies.MENU, reply_markup=keyboard.kb_client)
     else:
         await message.answer(replies.MENU, reply_markup=keyboard.kb_host)
+
+
+async def set_classic_mode(message: types.Message):
+    await common.update_caches(message)
+    common.action[message.from_user.id] = ""
+
+    if not common.host_to_game_code.keys().__contains__(message.from_user.id):
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
+        return
+
+    game = await Game.get_game(message.from_user.id)
+
+    if game.is_started:
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
+        return
+
+    game.ai = False
+    await message.answer(replies.CLASSIC_MODE_HAS_BEEN_SET, reply_markup=keyboard.kb_host_game_mode)
+
+
+async def set_ai_mode(message: types.Message):
+    await common.update_caches(message)
+    common.action[message.from_user.id] = ""
+
+    if not common.host_to_game_code.keys().__contains__(message.from_user.id):
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
+        return
+
+    game = await Game.get_game(message.from_user.id)
+
+    if game.is_started:
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
+        return
+
+    game.ai = True
+    await message.answer(replies.AI_MODE_HAS_BEEN_SET, reply_markup=keyboard.kb_host_game_mode)
+
+
+async def game_mode(message: types.Message):
+    await common.update_caches(message)
+    common.action[message.from_user.id] = ""
+
+    if not common.host_to_game_code.keys().__contains__(message.from_user.id):
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
+        return
+
+    game = await Game.get_game(message.from_user.id)
+
+    if game.is_started:
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
+        return
+
+    await message.answer(replies.SELECT_GAME_MODE, reply_markup=keyboard.kb_host_game_mode)
