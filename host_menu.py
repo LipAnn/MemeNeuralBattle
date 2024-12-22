@@ -60,6 +60,11 @@ async def start_game(message: types.Message):
         return
 
     game = common.code_to_game[common.host_to_game_code[message.from_user.id]]
+
+    if len(game.players) == 1:
+        await message.answer(replies.YOU_CANNOT_START_THE_GAME_ALONE)
+        return
+
     await game.start()
 
 

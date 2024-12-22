@@ -35,6 +35,7 @@ class Game:
         self.user_index_to_picture_number = list()
         self.picture_number_to_user_index = list()
         self.ai = True
+        self.is_break = True
 
         self.players.append(host)
         common.host_to_game_code[host] = code
@@ -187,6 +188,7 @@ class Game:
 
             await tg_utils.send_message_kb(player, replies.GAME_IS_OVER + "\n\n" +
                                            winner_placeholder.format(name=winner_list_message), keyboard)
+        await self.destroy()
 
     async def end_round(self):
 
@@ -209,7 +211,9 @@ class Game:
             await self.end_game()
             return
 
+        self.is_break = True
         time.sleep(5)
+        self.is_break = False
         await self.next_round()
 
     async def voting(self):
@@ -217,7 +221,7 @@ class Game:
         image_names = [0] * len(self.players)
         user_index = 0
         for player in self.players:
-            image_names[self.user_index_to_picture_number[user_index] - 1] =\
+            image_names[self.user_index_to_picture_number[user_index] - 1] = \
                 self.player_images[player][int(self.answer[player]) - 1]
             user_index += 1
 
@@ -234,7 +238,8 @@ class Game:
         await self.send_to_players(replies.PLAYER_HAS_VOTED.format(name=common.user_id_to_name[player]))
         self.vote[player] = vote
         self.scoreboard[self.players[self.picture_number_to_user_index[int(vote)]]] += \
-            len(self.players) - self.user_id_to_answer_order[self.players[self.picture_number_to_user_index[int(vote)]]] + 1
+            len(self.players) - self.user_id_to_answer_order[
+                self.players[self.picture_number_to_user_index[int(vote)]]] + 1
 
         if len(self.vote) == len(self.players) and not self.vote_finished.keys().__contains__(self.round):
             self.vote_finished[self.round] = True
@@ -242,8 +247,6 @@ class Game:
             await self.end_round()
 
     async def start(self):
-
-        await self.prepare_game()
 
         self.is_started = True
 
@@ -254,9 +257,14 @@ class Game:
 
         for player in self.players:
             await tg_utils.send_message(player, replies.THE_GAME_HAS_BEEN_STARTED.format(time=5) + "\n\n" +
-                                        replies.OPTIONS.format(game_mode=game_mode, round_limit=self.round_limit, players_count=len(self.players)))
+                                        replies.OPTIONS.format(game_mode=game_mode, round_limit=self.round_limit,
+                                                               players_count=len(self.players)))
 
+        await self.prepare_game()
+
+        self.is_break = True
         time.sleep(5)
+        self.is_break = False
         await self.next_round()
 
     async def set_answer(self, player, answer):
@@ -275,16 +283,25 @@ class Game:
                     buttons_row.append(KeyboardButton(text=str(buttons_count)))
             buttons.append(buttons_row)
 
-        if player == self.host:
-            buttons.append([KeyboardButton(text="Выйти и завершить игру")])
-        else:
-            buttons.append([KeyboardButton(text="Выйти из игры")])
+        host_buttons = buttons.copy()
+        host_buttons.append([KeyboardButton(text="Выйти и завершить игру")])
+        host_keyboard = ReplyKeyboardMarkup(keyboard=host_buttons, resize_keyboard=True)
 
-        keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+        client_buttons = buttons.copy()
+        client_buttons.append([KeyboardButton(text="Выйти из игры")])
+        client_keyboard = ReplyKeyboardMarkup(keyboard=client_buttons, resize_keyboard=True)
 
         if len(self.answer) == len(self.players) and not self.round_finished.keys().__contains__(self.round):
             self.round_finished[self.round] = True
-            await tg_utils.send_group_message_kb(message=replies.ROUND_HAS_ENDED,
-                                                 users=self.players,
-                                                 keyboard=keyboard)
+
+            for player in self.players:
+
+                if self.host == player:
+                    await tg_utils.send_message_kb(message=replies.ROUND_HAS_ENDED,
+                                                   user_id=player,
+                                                   keyboard=host_keyboard)
+                else:
+                    await tg_utils.send_message_kb(message=replies.ROUND_HAS_ENDED,
+                                                   user_id=player,
+                                                   keyboard=client_keyboard)
             await self.voting()

@@ -57,13 +57,19 @@ async def leave_game(message: types.Message):
 
     await common.update_caches(message)
 
-    common.action[message.from_user.id] = ""
-
     if not await Game.is_in_game(message.from_user.id):
         await message.answer(replies.YOU_ARE_NOT_CONNECTED_TO_THE_GAME, reply_markup=default_menu.kb_default)
+        common.action[message.from_user.id] = ""
         return
 
     game = await Game.get_game(message.from_user.id)
+
+    if not game.is_break:
+        await message.answer(replies.YOU_CANNOT_LEAVE_THE_GAME_WHILE_IT_IS_GOING)
+        return
+
+    common.action[message.from_user.id] = ""
+
     await game.leave(message.from_user.id)
 
     await message.answer(replies.YOU_LEFT_THE_GAME, reply_markup=default_menu.kb_default)
