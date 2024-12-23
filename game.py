@@ -194,7 +194,6 @@ class Game:
         for player in self.players:
             scoreboard_message += "\n"
             scoreboard_message += common.user_id_to_name[player] + ": " + str(self.scoreboard[player])
-        scoreboard_message += "\n\n" + replies.NEXT_ROUND_IN.format(time=5)
 
         await tg_utils.send_group_message(self.players, scoreboard_message)
 
@@ -209,7 +208,7 @@ class Game:
             await self.end_game()
             return
 
-        time.sleep(5)
+        time.sleep(2)
         await self.next_round()
 
     async def voting(self):
@@ -256,7 +255,7 @@ class Game:
             await tg_utils.send_message(player, replies.THE_GAME_HAS_BEEN_STARTED.format(time=5) + "\n\n" +
                                         replies.OPTIONS.format(game_mode=game_mode, round_limit=self.round_limit, players_count=len(self.players)))
 
-        time.sleep(5)
+        time.sleep(2)
         await self.next_round()
 
     async def set_answer(self, player, answer):
