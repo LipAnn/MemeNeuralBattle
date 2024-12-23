@@ -37,7 +37,7 @@ async def main():
     dp.message.register(enter_round_limit, F.text.lower() == "установить количество раундов")
     dp.message.register(back_to_menu, F.text.lower() == "выйти в меню")
     dp.message.register(set_classic_mode, F.text.lower() == "классический режим")
-    dp.message.register(set_ai_mode, F.text.lower() == "ии-режим")
+    dp.message.register(set_ai_mode, F.text.lower() == "нейро-режим")
     dp.message.register(game_mode, F.text.lower() == "режим игры")
     dp.message.register(help, F.text.lower() == "правила")
 

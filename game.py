@@ -194,7 +194,6 @@ class Game:
 
             await tg_utils.send_message_kb(player, replies.GAME_IS_OVER + "\n\n" +
                                            winner_placeholder.format(name=winner_list_message), keyboard)
-        await self.destroy()
 
     async def end_round(self):
 
@@ -218,7 +217,7 @@ class Game:
             return
 
         self.is_break = True
-        time.sleep(5)
+        time.sleep(2)
         self.is_break = False
         await self.next_round()
 
@@ -254,6 +253,8 @@ class Game:
 
     async def start(self):
 
+        await self.prepare_game()
+
         self.is_started = True
 
         if self.ai:
@@ -269,7 +270,7 @@ class Game:
         await self.prepare_game()
 
         self.is_break = True
-        time.sleep(5)
+        time.sleep(2)
         self.is_break = False
         await self.next_round()
 
