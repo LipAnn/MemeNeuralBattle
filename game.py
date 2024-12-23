@@ -112,10 +112,16 @@ class Game:
                 self.themes.append(themes[theme_index])
                 themes.remove(themes[theme_index])
         else:
-            self.themes = ya_gpt.get_generated_themes(self.round_limit)
+            self.themes = ya_gpt.generate_themes(self.round_limit)
 
         image_nums = list()
-        for i in range(0, common.last_image_num + 1):
+
+        if self.ai:
+            last_image_number = common.last_ai_image_num
+        else:
+            last_image_number = common.last_image_num
+
+        for i in range(0, last_image_number + 1):
             image_nums.append(i)
 
         for player in self.players:
@@ -159,7 +165,7 @@ class Game:
 
             await tg_utils.send_images(user=player,
                                        caption=replies.THEME.format(theme=self.themes[self.round - 1]),
-                                       image_names=image_names)
+                                       image_names=image_names, ai=self.ai)
 
             common.action[player] = "раунд"
 
@@ -230,7 +236,7 @@ class Game:
             await tg_utils.send_images(user=player,
                                        image_names=image_names,
                                        caption=replies.VOTING_STAGE.format(cur=self.round, limit=self.round_limit) +
-                                               "\n\n" + replies.THEME.format(theme=self.themes[self.round - 1]))
+                                               "\n\n" + replies.THEME.format(theme=self.themes[self.round - 1]), ai=self.ai)
 
     async def set_vote(self, player, vote):
 
