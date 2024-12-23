@@ -13,6 +13,11 @@ from keyboard import kb_host_game, kb_client_game, kb_host, kb_client
 games = list()
 
 
+leader_nominations = ["Мемный гуру", "Король/Королева мемов", "Мастер импровизации", "Душа компании", "Ироничный виртуоз", "Зажигалка"]
+middle_nominations = ["Завсегдатай", "Веселый компаньон", "Непринужденный собеседник", "Весельчак", "Просто лучший"]
+looser_nominations = ["Только с похорон приехал", "Драматург", "Хмурый котик", "Бука", "Мракобес", "Тучка"]
+
+
 class Game:
 
     def __init__(self, code, host, limit_players):
@@ -171,29 +176,34 @@ class Game:
 
     async def end_game(self):
 
-        winner_score = -1
-        winners = 0
-        for player in self.players:
-            if self.scoreboard[player] > winner_score:
-                winner_score = self.scoreboard[player]
-                winners = [player]
-            elif self.scoreboard[player] == winner_score:
-                winners.append(player)
+        leaderboard = list()
 
-        winner_list_message = ""
-        for winner in winners:
-            winner_list_message += common.user_id_to_name[winner] + " "
-        winner_list_message = winner_list_message.removesuffix(" ")
+        for player in self.players:
+            leaderboard.append((self.scoreboard[player], player))
+        leaderboard = sorted(leaderboard, key=lambda x: x[0])
+        leaderboard.reverse()
+
+        message = ""
+        bound_1 = max(1, len(leaderboard) // 3)
+        bound_2 = max(bound_1 + 1, bound_1 + len(leaderboard) // 3)
+
+        for i in range(len(leaderboard)):
+
+            if i < bound_1:
+                nomination = leader_nominations[random.randint(0, len(leader_nominations) - 1)]
+            elif i < bound_2:
+                nomination = middle_nominations[random.randint(0, len(middle_nominations) - 1)]
+            else:
+                nomination = looser_nominations[random.randint(0, len(looser_nominations) - 1)]
+
+            message += str(common.user_id_to_name[leaderboard[i][1]]) + " - " + nomination + "\n"
 
         for player in self.players:
             keyboard = kb_client if player != self.host else kb_host
 
-            winner_placeholder = replies.WINNER
-            if len(winners) > 1:
-                winner_placeholder = replies.WINNERS
-
             await tg_utils.send_message_kb(player, replies.GAME_IS_OVER + "\n\n" +
-                                           winner_placeholder.format(name=winner_list_message), keyboard)
+                                           replies.NOMINATIONS.format(nominations=message), keyboard)
+        await self.destroy()
 
     async def end_round(self):
 
@@ -201,7 +211,6 @@ class Game:
         for player in self.players:
             scoreboard_message += "\n"
             scoreboard_message += common.user_id_to_name[player] + ": " + str(self.scoreboard[player])
-        scoreboard_message += "\n\n" + replies.NEXT_ROUND_IN.format(time=5)
 
         await tg_utils.send_group_message(self.players, scoreboard_message)
 
