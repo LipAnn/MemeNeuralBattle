@@ -25,16 +25,13 @@ async def send_group_message(users, message):
         await common.bot.send_message(chat_id=common.user_id_to_chat_id[user], text=message)
 
 
-async def send_image(user, image_name):
-    image_name += ".jpg"
-    await common.bot.send_photo(chat_id=common.user_id_to_chat_id[user],
-                                photo=FSInputFile(path=os.path.join(common.images_dir, image_name)))
-
-
-async def send_images(user, caption, image_names):
+async def send_images(user, caption, image_names, ai):
     media = MediaGroupBuilder(caption=caption)
     for image_name in image_names:
         image_name += ".jpg"
-        media.add_photo(FSInputFile(path="images/" + image_name))
+        if ai:
+            media.add_photo(FSInputFile(path="ai_images/" + image_name))
+        else:
+            media.add_photo(FSInputFile(path="images/" + image_name))
 
     await common.bot.send_media_group(chat_id=common.user_id_to_chat_id[user], media=media.build())
