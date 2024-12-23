@@ -196,7 +196,6 @@ class Game:
         for player in self.players:
             scoreboard_message += "\n"
             scoreboard_message += common.user_id_to_name[player] + ": " + str(self.scoreboard[player])
-        scoreboard_message += "\n\n" + replies.NEXT_ROUND_IN.format(time=5)
 
         await tg_utils.send_group_message(self.players, scoreboard_message)
 
