@@ -208,7 +208,7 @@ class Game:
             await self.end_game()
             return
 
-        time.sleep(2)
+        time.sleep(5)
         await self.next_round()
 
     async def voting(self):
@@ -255,7 +255,7 @@ class Game:
             await tg_utils.send_message(player, replies.THE_GAME_HAS_BEEN_STARTED.format(time=5) + "\n\n" +
                                         replies.OPTIONS.format(game_mode=game_mode, round_limit=self.round_limit, players_count=len(self.players)))
 
-        time.sleep(2)
+        time.sleep(5)
         await self.next_round()
 
     async def set_answer(self, player, answer):
