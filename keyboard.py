@@ -72,7 +72,8 @@ kb_host_options = ReplyKeyboardMarkup(keyboard=__kb_host_options_buttons, resize
 __kb_host_ai_game_mode = [
     [
         KeyboardButton(text="Нейро-режим"),
-        KeyboardButton(text="Классический режим")
+        KeyboardButton(text="Классический режим"),
+        KeyboardButton(text="Смешанный режим")
     ],
     [
         KeyboardButton(text="Настройки игры")

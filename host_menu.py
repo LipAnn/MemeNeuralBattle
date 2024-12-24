@@ -61,6 +61,10 @@ async def start_game(message: types.Message):
 
     game = common.code_to_game[common.host_to_game_code[message.from_user.id]]
 
+    if game.is_started:
+        await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
+        return
+
     if len(game.players) == 1:
         await message.answer(replies.YOU_CANNOT_START_THE_GAME_ALONE)
         return
@@ -77,10 +81,12 @@ async def options(message: types.Message):
         return
 
     game = await Game.get_game(message.from_user.id)
-    if game.ai:
-        game_mode = "ИИ"
+    if game.mode == 1:
+        game_mode = "Нейро"
+    elif game.mode == 2:
+        game_mode = "Смешанный"
     else:
-        game_mode = "Классический"
+        game_mode = "Классичесикй"
     await message.answer(replies.OPTIONS.format(game_mode=game_mode, round_limit=game.round_limit, players_count=len(game.players)), reply_markup=keyboard.kb_host_options)
 
 
@@ -153,7 +159,7 @@ async def set_classic_mode(message: types.Message):
         await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
         return
 
-    game.ai = False
+    game.mode = 0
     await message.answer(replies.CLASSIC_MODE_HAS_BEEN_SET, reply_markup=keyboard.kb_host_game_mode)
 
 
@@ -173,8 +179,28 @@ async def set_ai_mode(message: types.Message):
         await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
         return
 
-    game.ai = True
+    game.mode = 1
     await message.answer(replies.AI_MODE_HAS_BEEN_SET, reply_markup=keyboard.kb_host_game_mode)
+
+
+async def set_mixed_mode(message: types.Message):
+    await common.update_caches(message)
+    common.action[message.from_user.id] = ""
+
+    if not common.host_to_game_code.keys().__contains__(message.from_user.id):
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.YOU_ARE_NOT_A_GAME_HOST)
+        return
+
+    game = await Game.get_game(message.from_user.id)
+
+    if game.is_started:
+        common.action[message.from_user.id] = ""
+        await message.answer(replies.THE_GAME_IS_ALREADY_STARTED)
+        return
+
+    game.mode = 2
+    await message.answer(replies.MIXED_MODE_HAS_BEEN_SET, reply_markup=keyboard.kb_host_game_mode)
 
 
 async def game_mode(message: types.Message):
