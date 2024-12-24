@@ -1,5 +1,8 @@
+import asyncio
+import math
 import random
 import time
+import aioschedule
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
@@ -11,6 +14,11 @@ import ya_gpt
 from keyboard import kb_host_game, kb_client_game, kb_host, kb_client
 
 games = list()
+
+leader_nominations = ["Мемный гуру", "Король/Королева мемов", "Мастер импровизации", "Душа компании",
+                      "Ироничный виртуоз", "Зажигалка"]
+middle_nominations = ["Завсегдатай", "Веселый компаньон", "Непринужденный собеседник", "Весельчак", "Просто лучший"]
+looser_nominations = ["Только с похорон приехал", "Драматург", "Хмурый котик", "Бука", "Мракобес", "Тучка"]
 
 
 class Game:
@@ -34,7 +42,7 @@ class Game:
         self.scoreboard = dict()
         self.user_index_to_picture_number = list()
         self.picture_number_to_user_index = list()
-        self.ai = True
+        self.mode = 2
         self.is_break = True
 
         self.players.append(host)
@@ -104,22 +112,39 @@ class Game:
     async def prepare_game(self):
         self.round = 0
 
-        if not self.ai:
+        if self.mode == 0:
+
             with open("themes/themes.txt", encoding="UTF-8") as themes_file:
                 themes = themes_file.readlines()
             for i in range(self.round_limit):
                 theme_index = random.randint(0, len(themes) - 1)
                 self.themes.append(themes[theme_index])
                 themes.remove(themes[theme_index])
-        else:
+
+        elif self.mode == 1:
+
             self.themes = ya_gpt.generate_themes(self.round_limit)
+        else:
+
+            with open("themes/themes.txt", encoding="UTF-8") as themes_file:
+                themes = themes_file.readlines()
+            for i in range(self.round_limit):
+                theme_index = random.randint(0, len(themes) - 1)
+                self.themes.append(themes[theme_index])
+                themes.remove(themes[theme_index])
+
+            self.themes.extend(ya_gpt.generate_themes(self.round_limit))
+            random.shuffle(self.themes)
+            self.themes = self.themes[:self.round_limit:]
 
         image_nums = list()
 
-        if self.ai:
+        if self.mode == 0:
+            last_image_number = common.last_image_num
+        elif self.mode == 1:
             last_image_number = common.last_ai_image_num
         else:
-            last_image_number = common.last_image_num
+            last_image_number = common.last_ai_image_num + common.last_image_num
 
         for i in range(0, last_image_number + 1):
             image_nums.append(i)
@@ -152,6 +177,7 @@ class Game:
             self.picture_number_to_user_index[self.user_index_to_picture_number[i]] = i
 
         self.round += 1
+        self.round_finished[self.round] = False
 
         for player in self.players:
 
@@ -165,35 +191,58 @@ class Game:
 
             await tg_utils.send_images(user=player,
                                        caption=replies.THEME.format(theme=self.themes[self.round - 1]),
-                                       image_names=image_names, ai=self.ai)
+                                       image_names=image_names, ai=self.mode)
 
             common.action[player] = "раунд"
 
+        round_num = self.round
+        await asyncio.sleep(15)
+        message = ""
+        for player in self.players:
+            if not self.answer.keys().__contains__(player) and self.round_finished.keys().__contains__(round_num) and not \
+                    self.round_finished[round_num]:
+                message += common.user_id_to_name[player] + " "
+
+        if len(message) != 0:
+            await tg_utils.send_group_message(self.players, replies.PLAYERS_HAVENT_ANSWER.format(names=message))
+        await asyncio.sleep(10)
+
+        for player in self.players:
+            if not self.answer.keys().__contains__(player) and self.round_finished.keys().__contains__(round_num) and not \
+                    self.round_finished[round_num]:
+                common.action[player] = ""
+                answer = str(random.randint(1, 6))
+                await self.set_answer(player, answer)
+
     async def end_game(self):
 
-        winner_score = -1
-        winners = 0
-        for player in self.players:
-            if self.scoreboard[player] > winner_score:
-                winner_score = self.scoreboard[player]
-                winners = [player]
-            elif self.scoreboard[player] == winner_score:
-                winners.append(player)
+        leaderboard = list()
 
-        winner_list_message = ""
-        for winner in winners:
-            winner_list_message += common.user_id_to_name[winner] + " "
-        winner_list_message = winner_list_message.removesuffix(" ")
+        for player in self.players:
+            leaderboard.append((self.scoreboard[player], player))
+        leaderboard = sorted(leaderboard, key=lambda x: x[0])
+        leaderboard.reverse()
+
+        message = ""
+        bound_1 = max(1, len(leaderboard) // 3)
+        bound_2 = max(bound_1 + 1, bound_1 + len(leaderboard) // 3)
+
+        for i in range(len(leaderboard)):
+
+            if i < bound_1:
+                nomination = leader_nominations[random.randint(0, len(leader_nominations) - 1)]
+            elif i < bound_2:
+                nomination = middle_nominations[random.randint(0, len(middle_nominations) - 1)]
+            else:
+                nomination = looser_nominations[random.randint(0, len(looser_nominations) - 1)]
+
+            message += str(common.user_id_to_name[leaderboard[i][1]]) + " - " + nomination + "\n"
 
         for player in self.players:
             keyboard = kb_client if player != self.host else kb_host
 
-            winner_placeholder = replies.WINNER
-            if len(winners) > 1:
-                winner_placeholder = replies.WINNERS
-
             await tg_utils.send_message_kb(player, replies.GAME_IS_OVER + "\n\n" +
-                                           winner_placeholder.format(name=winner_list_message), keyboard)
+                                           replies.NOMINATIONS.format(nominations=message), keyboard)
         await self.destroy()
 
     async def end_round(self):
@@ -216,8 +265,6 @@ class Game:
             await self.end_game()
             return
 
-        self.is_break = True
-        time.sleep(5)
         self.is_break = False
         await self.next_round()
 
@@ -229,6 +276,7 @@ class Game:
             image_names[self.user_index_to_picture_number[user_index] - 1] = \
                 self.player_images[player][int(self.answer[player]) - 1]
             user_index += 1
+        self.vote_finished[self.round] = False
 
         for player in self.players:
             common.action[player] = "vote"
@@ -236,17 +284,42 @@ class Game:
             await tg_utils.send_images(user=player,
                                        image_names=image_names,
                                        caption=replies.VOTING_STAGE.format(cur=self.round, limit=self.round_limit) +
-                                               "\n\n" + replies.THEME.format(theme=self.themes[self.round - 1]), ai=self.ai)
+                                               "\n\n" + replies.THEME.format(theme=self.themes[self.round - 1]),
+                                       ai=self.mode)
+
+        round_num = self.round
+        await asyncio.sleep(15)
+        message = ""
+        for player in self.players:
+            if not self.vote.keys().__contains__(player) and self.vote_finished.keys().__contains__(round_num) and not \
+                    self.vote_finished[round_num]:
+                message += common.user_id_to_name[player] + " "
+
+        if len(message) != 0:
+            await tg_utils.send_group_message(self.players, replies.PLAYERS_HAVENT_VOTED.format(names=message))
+        await asyncio.sleep(10)
+
+        for player in self.players:
+            if not self.vote.keys().__contains__(player) and self.vote_finished.keys().__contains__(round_num) and not \
+                    self.vote_finished[round_num]:
+
+                common.action[player] = ""
+                vote = str(random.randint(1, len(self.players)))
+
+                while self.players[self.picture_number_to_user_index[int(vote)]] == player:
+                    vote = str(random.randint(1, len(self.players)))
+
+                await self.set_vote(player, vote)
 
     async def set_vote(self, player, vote):
 
         await self.send_to_players(replies.PLAYER_HAS_VOTED.format(name=common.user_id_to_name[player]))
         self.vote[player] = vote
         self.scoreboard[self.players[self.picture_number_to_user_index[int(vote)]]] += \
-            len(self.players) - self.user_id_to_answer_order[
-                self.players[self.picture_number_to_user_index[int(vote)]]] + 1
+            round(math.log((len(self.players) - self.user_id_to_answer_order[
+                self.players[self.picture_number_to_user_index[int(vote)]]] + 1) * 300))
 
-        if len(self.vote) == len(self.players) and not self.vote_finished.keys().__contains__(self.round):
+        if len(self.vote) == len(self.players) and not self.vote_finished[self.round]:
             self.vote_finished[self.round] = True
             await tg_utils.send_group_message(self.players, replies.VOTE_HAS_ENDED)
             await self.end_round()
@@ -255,8 +328,14 @@ class Game:
 
         self.is_started = True
 
-        if self.ai:
-            game_mode = "ИИ"
+        await tg_utils.send_group_message(self.players, replies.PREPARING_THE_GAME)
+
+        await self.prepare_game()
+
+        if self.mode == 1:
+            game_mode = "Нейро"
+        elif self.mode == 2:
+            game_mode = "Смешанный"
         else:
             game_mode = "Классический"
 
@@ -267,16 +346,14 @@ class Game:
 
         await self.prepare_game()
 
-        self.is_break = True
-        time.sleep(5)
         self.is_break = False
         await self.next_round()
 
     async def set_answer(self, player, answer):
 
-        await self.send_to_players(replies.PLAYER_SET_AN_ANSWER.format(name=common.user_id_to_name[player]))
         self.user_id_to_answer_order[player] = len(self.user_id_to_answer_order) + 1
         self.answer[player] = answer
+        await self.send_to_players(replies.PLAYER_SET_AN_ANSWER.format(name=common.user_id_to_name[player]))
 
         buttons = list()
         buttons_count = 0
@@ -296,7 +373,7 @@ class Game:
         client_buttons.append([KeyboardButton(text="Выйти из игры")])
         client_keyboard = ReplyKeyboardMarkup(keyboard=client_buttons, resize_keyboard=True)
 
-        if len(self.answer) == len(self.players) and not self.round_finished.keys().__contains__(self.round):
+        if len(self.answer) == len(self.players) and not self.round_finished[self.round]:
             self.round_finished[self.round] = True
 
             for player in self.players:

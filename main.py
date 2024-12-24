@@ -10,7 +10,7 @@ from client_menu import join_game, join_specified_game, leave_game
 from common import action, bot
 from default_menu import start, help
 from host_menu import create_new_game, leave_and_destroy_game, start_game, set_round_limit, enter_round_limit, options,\
-    back_to_menu, set_classic_mode, set_ai_mode, game_mode
+    back_to_menu, set_classic_mode, set_ai_mode, game_mode, set_mixed_mode
 from answer import answer
 from vote import vote
 
@@ -40,6 +40,7 @@ async def main():
     dp.message.register(set_ai_mode, F.text.lower() == "нейро-режим")
     dp.message.register(game_mode, F.text.lower() == "режим игры")
     dp.message.register(help, F.text.lower() == "правила")
+    dp.message.register(set_mixed_mode, F.text.lower() == "смешанный режим")
 
     dp.message.register(answer, F.from_user.id.func(
         lambda x: action.keys().__contains__(x) and action[x] == "раунд"

@@ -22,6 +22,8 @@ last_image_num = int(os.getenv("LAST_IMAGE_NUM"))
 ai_images_dir = os.path.dirname("ai_images")
 last_ai_image_num = int(os.getenv("LAST_AI_IMAGE_NUM"))
 
+mixed_images_dir = os.path.dirname("mixed_images")
+
 
 async def update_caches(message: types.Message):
     user_id_to_chat_id[message.from_user.id] = message.chat.id

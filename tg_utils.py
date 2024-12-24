@@ -29,9 +29,11 @@ async def send_images(user, caption, image_names, ai):
     media = MediaGroupBuilder(caption=caption)
     for image_name in image_names:
         image_name += ".jpg"
-        if ai:
+        if ai == 1:
             media.add_photo(FSInputFile(path="ai_images/" + image_name))
-        else:
+        elif ai == 0:
             media.add_photo(FSInputFile(path="images/" + image_name))
+        else:
+            media.add_photo(FSInputFile(path="mixed_images/" + image_name))
 
     await common.bot.send_media_group(chat_id=common.user_id_to_chat_id[user], media=media.build())
